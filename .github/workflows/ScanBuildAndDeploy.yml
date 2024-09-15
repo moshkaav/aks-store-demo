@@ -43,7 +43,7 @@ jobs:
           export NEXT_BUILD_NUMBER=$((BUILD_NUMBER+1))
           echo "Next build number is $NEXT_BUILD_NUMBER"
           echo $NEXT_BUILD_NUMBER > build_number.txt
-          echo "NEXT_BUILD_NUMBER=$NEXT_BUILD_NUMBER" >> $GITHUB_ENV
+          echo "NEXT_BUILD_NUMBER=$NEXT_BUILD_NUMBER" >> $GITHUB_ENV  # Use environment files to pass value between jobs
 
       - name: Commit the incremented build number
         run: |
@@ -57,8 +57,6 @@ jobs:
   build_order_service:
     runs-on: ubuntu-latest
     needs: build
-    outputs:
-      image_tag: ${{ steps.build.outputs.image_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -69,7 +67,6 @@ jobs:
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
       - name: Build Order Service Image
-        id: build
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:${{ env.NEXT_BUILD_NUMBER }} ./src/order-service
           echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-cloud/order-service:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
@@ -77,8 +74,6 @@ jobs:
   build_product_service:
     runs-on: ubuntu-latest
     needs: build
-    outputs:
-      image_tag: ${{ steps.build.outputs.image_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -89,7 +84,6 @@ jobs:
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
       - name: Build Product Service Image
-        id: build
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:${{ env.NEXT_BUILD_NUMBER }} ./src/product-service
           echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-cloud/product-service:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
@@ -97,8 +91,6 @@ jobs:
   build_store_front:
     runs-on: ubuntu-latest
     needs: build
-    outputs:
-      image_tag: ${{ steps.build.outputs.image_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -109,7 +101,6 @@ jobs:
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
       - name: Build Store Front Image
-        id: build
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:${{ env.NEXT_BUILD_NUMBER }} ./src/store-front
           echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-cloud/store-front:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
@@ -120,7 +111,7 @@ jobs:
     steps:
       - name: Save and Scan Order Service Image
         run: |
-          docker save ${{ needs.build_order_service.outputs.image_tag }} -o order-service.tar
+          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:${{ env.NEXT_BUILD_NUMBER }} -o order-service.tar
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
                      -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
@@ -133,7 +124,7 @@ jobs:
     steps:
       - name: Save and Scan Product Service Image
         run: |
-          docker save ${{ needs.build_product_service.outputs.image_tag }} -o product-service.tar
+          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:${{ env.NEXT_BUILD_NUMBER }} -o product-service.tar
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
                      -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
@@ -146,7 +137,7 @@ jobs:
     steps:
       - name: Save and Scan Store Front Image
         run: |
-          docker save ${{ needs.build_store_front.outputs.image_tag }} -o store-front.tar
+          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:${{ env.NEXT_BUILD_NUMBER }} -o store-front.tar
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
                      -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
