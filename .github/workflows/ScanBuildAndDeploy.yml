@@ -82,6 +82,17 @@ jobs:
           docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER ./src/order-service
           echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER" >> $GITHUB_ENV
 
+      - name: Save Docker image as tar file
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER -o order-service.tar
+
+      - name: Upload Docker Image Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: order-service-image
+          path: order-service.tar
+
   build_product_service:
     runs-on: ubuntu-latest
     needs: build
@@ -143,6 +154,15 @@ jobs:
         with:
           name: build-number
 
+      - name: Download Docker Image Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: order-service-image
+
+      - name: Load Docker Image from tar file
+        run: |
+          docker load -i order-service.tar
+
       - name: Save and Scan Order Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
@@ -203,10 +223,4 @@ jobs:
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
-          login-server: ${{ secrets.ACR_REPO }}
-          username: ${{ secrets.ACR_USER }}
-          password: ${{ secrets.ACR_PASS }}
-
-      - name: Push Order Service Image
-        run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
+          login-server: ${{ secrets.ACR_RE
