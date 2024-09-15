@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:  # Allows manual trigger for the workflow
 
 env:
   SPECTRAL_DSN: ${{ secrets.SPECTRAL_DSN }}
 
 jobs:
+  # Code scanning step
   code_scan:
     runs-on: ubuntu-latest
     steps:
@@ -19,6 +21,7 @@ jobs:
           spectral-dsn: ${{ secrets.SPECTRAL_DSN }}
           spectral-args: scan --ok --engines secrets,iac,oss --include-tags base,audit3,iac
 
+  # Build and cache the services
   build:
     runs-on: ubuntu-latest
     needs: code_scan
@@ -38,8 +41,8 @@ jobs:
           if [ ! -f build_number.txt ]; then echo "0" > build_number.txt; fi
           BUILD_NUMBER=$(cat build_number.txt)
           NEXT_BUILD_NUMBER=$((BUILD_NUMBER+1))
-          echo "Next build number is $NEXT_BUILD_NUMBER"
-          echo $NEXT_BUILD_NUMBER > build_number.txt  # Overwrite the file with the next build number
+          echo $NEXT_BUILD_NUMBER > build_number.txt
+        id: build_number
 
       - name: Commit the incremented build number
         run: |
@@ -77,17 +80,12 @@ jobs:
 
       - name: Build Order Service Image
         run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
           echo "Using build number: $NEXT_BUILD_NUMBER"
           docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER ./src/order-service
-          echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER" >> $GITHUB_ENV
-
-      - name: Save Docker image as tar file
-        run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER -o order-service.tar
 
-      - name: Upload Docker Image Artifact
+      - name: Upload Order Service Image
         uses: actions/upload-artifact@v3
         with:
           name: order-service-image
@@ -114,10 +112,15 @@ jobs:
 
       - name: Build Product Service Image
         run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
-          echo "Using build number: $NEXT_BUILD_NUMBER"
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER ./src/product-service
-          echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER" >> $GITHUB_ENV
+          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER -o product-service.tar
+
+      - name: Upload Product Service Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: product-service-image
+          path: product-service.tar
 
   build_store_front:
     runs-on: ubuntu-latest
@@ -140,11 +143,17 @@ jobs:
 
       - name: Build Store Front Image
         run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
-          echo "Using build number: $NEXT_BUILD_NUMBER"
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER ./src/store-front
-          echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER" >> $GITHUB_ENV
+          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER -o store-front.tar
 
+      - name: Upload Store Front Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: store-front-image
+          path: store-front.tar
+
+  # Image Assurance Jobs (for Order, Product, and Store Front services)
   image_assurance_order_service:
     runs-on: ubuntu-latest
     needs: build_order_service
@@ -153,40 +162,23 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-number
-  
-      - name: Download Docker Image Artifact
+
+      - name: Download Order Service Image
         uses: actions/download-artifact@v3
         with:
           name: order-service-image
-  
+
       - name: Load Docker Image from tar file
+        run: docker load -i order-service.tar
+
+      - name: Run Order Service Image Assurance
         run: |
-          docker load -i order-service.tar
-  
-      - name: Debug Environment Variables
-        run: |
-          echo "CHKP_CLOUDGUARD_ID: ${CHKP_CLOUDGUARD_ID}"
-          echo "CHKP_CLOUDGUARD_SECRET: ${CHKP_CLOUDGUARD_SECRET}"
-          echo "SHIFTLEFT_REGION: ${SHIFTLEFT_REGION}"
-        env:
-          CHKP_CLOUDGUARD_ID: ${{ secrets.CHKP_CLOUDGUARD_ID }}
-          CHKP_CLOUDGUARD_SECRET: ${{ secrets.CHKP_CLOUDGUARD_SECRET }}
-          SHIFTLEFT_REGION: ${{ env.SHIFTLEFT_REGION }}
-  
-      - name: Save and Scan Order Service Image
-        run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
-          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER -o order-service.tar
-          docker run -e "CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }}" \
-                     -e "CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }}" \
-                     -e "SHIFTLEFT_REGION=${SHIFTLEFT_REGION}" \
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
                      -v $(pwd)/order-service.tar:/tmp/images/image.tar \
-                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e "${{ secrets.SHIFTLEFT_ENV }}" -i /tmp/images/image.tar
-        env:
-          CHKP_CLOUDGUARD_ID: ${{ secrets.CHKP_CLOUDGUARD_ID }}
-          CHKP_CLOUDGUARD_SECRET: ${{ secrets.CHKP_CLOUDGUARD_SECRET }}
-          SHIFTLEFT_REGION: ${{ env.SHIFTLEFT_REGION }}
-          SHIFTLEFT_ENV: ${{ secrets.SHIFTLEFT_ENV }}
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
   image_assurance_product_service:
     runs-on: ubuntu-latest
@@ -197,10 +189,17 @@ jobs:
         with:
           name: build-number
 
-      - name: Save and Scan Product Service Image
+      - name: Download Product Service Image
+        uses: actions/download-artifact@v3
+        with:
+          name: product-service-image
+
+      - name: Load Docker Image from tar file
+        run: docker load -i product-service.tar
+
+      - name: Run Product Service Image Assurance
         run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
-          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER -o product-service.tar
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
                      -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
@@ -216,31 +215,39 @@ jobs:
         with:
           name: build-number
 
-      - name: Save and Scan Store Front Image
+      - name: Download Store Front Image
+        uses: actions/download-artifact@v3
+        with:
+          name: store-front-image
+
+      - name: Load Docker Image from tar file
+        run: docker load -i store-front.tar
+
+      - name: Run Store Front Image Assurance
         run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
-          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER -o store-front.tar
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
                      -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
                      -v $(pwd)/store-front.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
+  # Push images to ACR after assurance steps
   push:
     runs-on: ubuntu-latest
     needs: [image_assurance_order_service, image_assurance_product_service, image_assurance_store_front]
     steps:
-      - name: Download Build Number Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: build-number
-
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.ACR_REPO }}
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
+
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
 
       - name: Push Order Service Image
         run: |
