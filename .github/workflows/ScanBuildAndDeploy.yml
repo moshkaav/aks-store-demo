@@ -57,6 +57,8 @@ jobs:
   build_order_service:
     runs-on: ubuntu-latest
     needs: build
+    outputs:
+      image_tag: ${{ steps.build.outputs.image_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -67,25 +69,16 @@ jobs:
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
       - name: Build Order Service Image
+        id: build
         run: |
-          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ env.NEXT_BUILD_NUMBER }} ./src/order-service
-          echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
-
-      - name: Save Order Service Image to Tar
-        run: |
-          docker save $IMAGE_TAG -o order-service.tar
-
-      - name: Scan Order Service Image
-        run: |
-          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
-                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
-                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
-                     -v $(pwd)/order-service.tar:/tmp/images/image.tar \
-                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:${{ env.NEXT_BUILD_NUMBER }} ./src/order-service
+          echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-cloud/order-service:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
 
   build_product_service:
     runs-on: ubuntu-latest
     needs: build
+    outputs:
+      image_tag: ${{ steps.build.outputs.image_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -96,25 +89,16 @@ jobs:
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
       - name: Build Product Service Image
+        id: build
         run: |
-          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ env.NEXT_BUILD_NUMBER }} ./src/product-service
-          echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
-
-      - name: Save Product Service Image to Tar
-        run: |
-          docker save $IMAGE_TAG -o product-service.tar
-
-      - name: Scan Product Service Image
-        run: |
-          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
-                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
-                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
-                     -v $(pwd)/product-service.tar:/tmp/images/image.tar \
-                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:${{ env.NEXT_BUILD_NUMBER }} ./src/product-service
+          echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-cloud/product-service:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
 
   build_store_front:
     runs-on: ubuntu-latest
     needs: build
+    outputs:
+      image_tag: ${{ steps.build.outputs.image_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -125,16 +109,36 @@ jobs:
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
       - name: Build Store Front Image
+        id: build
         run: |
-          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ env.NEXT_BUILD_NUMBER }} ./src/store-front
-          echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:${{ env.NEXT_BUILD_NUMBER }} ./src/store-front
+          echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-cloud/store-front:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
 
-      - name: Save Store Front Image to Tar
+  image_assurance:
+    runs-on: ubuntu-latest
+    needs: [build_order_service, build_product_service, build_store_front]
+    steps:
+      - name: Save and Scan Order Service Image
         run: |
-          docker save $IMAGE_TAG -o store-front.tar
+          docker save ${{ needs.build_order_service.outputs.image_tag }} -o order-service.tar
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -v $(pwd)/order-service.tar:/tmp/images/image.tar \
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
-      - name: Scan Store Front Image
+      - name: Save and Scan Product Service Image
         run: |
+          docker save ${{ needs.build_product_service.outputs.image_tag }} -o product-service.tar
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -v $(pwd)/product-service.tar:/tmp/images/image.tar \
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+
+      - name: Save and Scan Store Front Image
+        run: |
+          docker save ${{ needs.build_store_front.outputs.image_tag }} -o store-front.tar
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
                      -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
@@ -143,7 +147,7 @@ jobs:
 
   push:
     runs-on: ubuntu-latest
-    needs: [build_order_service, build_product_service, build_store_front]
+    needs: image_assurance
     steps:
       - name: Log in to ACR
         uses: azure/docker-login@v1
@@ -153,10 +157,10 @@ jobs:
           password: ${{ secrets.ACR_PASS }}
       - name: Push Order Service Image
         run: |
-          docker push ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ env.NEXT_BUILD_NUMBER }}
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:${{ env.NEXT_BUILD_NUMBER }}
       - name: Push Product Service Image
         run: |
-          docker push ${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ env.NEXT_BUILD_NUMBER }}
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:${{ env.NEXT_BUILD_NUMBER }}
       - name: Push Store Front Image
         run: |
-          docker push ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ env.NEXT_BUILD_NUMBER }}
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:${{ env.NEXT_BUILD_NUMBER }}
