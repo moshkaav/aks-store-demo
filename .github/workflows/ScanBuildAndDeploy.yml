@@ -9,7 +9,7 @@ env:
   SPECTRAL_DSN: ${{ secrets.SPECTRAL_DSN }}
 
 jobs:
-  scan:
+  code_scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -104,9 +104,49 @@ jobs:
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ needs.build.outputs.next_build_number }} ./src/store-front
 
-  push:
+  image_assurance:
     runs-on: ubuntu-latest
     needs: [build_order_service, build_product_service, build_store_front]
+    steps:
+      - name: Save Order Service Image to Tar
+        run: |
+          docker save ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ needs.build.outputs.next_build_number }} -o order-service.tar
+
+      - name: Scan Order Service Image
+        run: |
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -v $(pwd)/order-service.tar:/tmp/images/image.tar \
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+
+      - name: Save Product Service Image to Tar
+        run: |
+          docker save ${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ needs.build.outputs.next_build_number }} -o product-service.tar
+
+      - name: Scan Product Service Image
+        run: |
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -v $(pwd)/product-service.tar:/tmp/images/image.tar \
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+
+      - name: Save Store Front Image to Tar
+        run: |
+          docker save ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ needs.build.outputs.next_build_number }} -o store-front.tar
+
+      - name: Scan Store Front Image
+        run: |
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -v $(pwd)/store-front.tar:/tmp/images/image.tar \
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+
+  push:
+    runs-on: ubuntu-latest
+    needs: scan_images
     steps:
       - name: Log in to ACR
         uses: azure/docker-login@v1
