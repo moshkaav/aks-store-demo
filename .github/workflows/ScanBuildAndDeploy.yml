@@ -351,16 +351,84 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-number
+      
+      - name: Download Order Service Image
+        uses: actions/download-artifact@v3
+        with:
+          name: order-service-image
 
+      - name: Load Docker Image from tar file
+        run: docker load -i order-service.tar
+
+      - name: Download Order Service Digest
+        uses: actions/download-artifact@v3
+        with:
+          name: order-service-digest
+
+      - name: Verify Order Service Digest
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          IMAGE_DIGEST=$(docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER)
+          STORED_DIGEST=$(cat order-service-digest.txt)
+          if [ "$IMAGE_DIGEST" != "$STORED_DIGEST" ]; then
+            echo "Image digest mismatch! Verification failed."
+            exit 1
+          fi
+          
       - name: Push Order Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker push ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER
+      - name: Download Product Service Image
+        uses: actions/download-artifact@v3
+        with:
+          name: product-service-image
 
+      - name: Load Docker Image from tar file
+        run: docker load -i product-service.tar
+
+      - name: Download Product Service Digest
+        uses: actions/download-artifact@v3
+        with:
+          name: product-service-digest
+
+      - name: Verify Product Service Digest
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          IMAGE_DIGEST=$(docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER)
+          STORED_DIGEST=$(cat product-service-digest.txt)
+          if [ "$IMAGE_DIGEST" != "$STORED_DIGEST" ]; then
+            echo "Image digest mismatch! Verification failed."
+            exit 1
+          fi
+          
       - name: Push Product Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker push ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER
+
+      - name: Download Store Front Image
+        uses: actions/download-artifact@v3
+        with:
+          name: store-front-image
+
+      - name: Load Docker Image from tar file
+        run: docker load -i store-front.tar
+
+      - name: Download Store Front Digest
+        uses: actions/download-artifact@v3
+        with:
+          name: store-front-digest
+
+      - name: Verify Store Front Digest
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          IMAGE_DIGEST=$(docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER)
+          STORED_DIGEST=$(cat store-front-digest.txt)
+          if [ "$IMAGE_DIGEST" != "$STORED_DIGEST" ]; then
+            echo "Image digest mismatch! Verification failed."
+            exit 1
+          fi
 
       - name: Push Store Front Image
         run: |
