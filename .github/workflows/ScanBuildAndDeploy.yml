@@ -17,7 +17,7 @@ jobs:
       - name: Install and run Spectral CI
         uses: checkpointsw/spectral-github-action@v3
         with:
-          spectral-dsn: ${{ env.SPECTRAL_DSN }}
+          spectral-dsn: ${{ secrets.SPECTRAL_DSN }}
           spectral-args: scan --ok --engines secrets,iac,oss --include-tags base,audit3,iac
 
   build:
@@ -108,6 +108,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_order_service, build_product_service, build_store_front]
     steps:
+      - name: Debug Next Build Number
+        run: echo "Next Build Number: ${{ needs.build.outputs.next_build_number }}"
+
       - name: Save Order Service Image to Tar
         run: |
           docker save ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ needs.build.outputs.next_build_number }} -o order-service.tar
@@ -117,6 +120,7 @@ jobs:
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
                      -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -e SHIFTLEFT_ENV=${{ secrets.SHIFTLEFT_ENV }} \
                      -v $(pwd)/order-service.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
@@ -129,6 +133,7 @@ jobs:
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
                      -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -e SHIFTLEFT_ENV=${{ secrets.SHIFTLEFT_ENV }} \
                      -v $(pwd)/product-service.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
@@ -141,6 +146,7 @@ jobs:
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
                      -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -e SHIFTLEFT_ENV=${{ secrets.SHIFTLEFT_ENV }} \
                      -v $(pwd)/store-front.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
