@@ -108,15 +108,12 @@ jobs:
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
           echo "Using build number: $NEXT_BUILD_NUMBER"
   
-          # Debug: List current Docker images before build
-          docker images
-  
           # Build and push the image
           docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER ./src/order-service
-          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER
+          # docker push ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER
   
           # Debug: List Docker images after the build and push
-          docker images
+          #docker images
   
           # Inspect the image to get its ID
           docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER > order-service-digest.txt
@@ -166,7 +163,7 @@ jobs:
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER ./src/product-service
-          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER
+          #docker push ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER
           docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER > product-service-digest.txt
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER -o product-service.tar
 
@@ -205,7 +202,7 @@ jobs:
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER ./src/store-front
-          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER
+          #docker push ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER
           docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER > store-front-digest.txt
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER -o store-front.tar
 
