@@ -6,8 +6,13 @@ on:
       - 'main'
     paths:
       - 'src/store-front/**'
+  workflow_call:
+    inputs:
+      build_number:
+        required: true
+        type: string
 
-  workflow_dispatch:
+ # workflow_dispatch:
 
 permissions:
   contents: read
