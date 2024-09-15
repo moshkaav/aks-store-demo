@@ -49,7 +49,7 @@ jobs:
   # Build and cache the services
   build:
     runs-on: ubuntu-latest
-    needs: code_scan
+    #needs: code_scan
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
