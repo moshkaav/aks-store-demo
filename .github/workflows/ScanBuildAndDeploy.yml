@@ -153,25 +153,40 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-number
-
+  
       - name: Download Docker Image Artifact
         uses: actions/download-artifact@v3
         with:
           name: order-service-image
-
+  
       - name: Load Docker Image from tar file
         run: |
           docker load -i order-service.tar
-
+  
+      - name: Debug Environment Variables
+        run: |
+          echo "CHKP_CLOUDGUARD_ID: ${CHKP_CLOUDGUARD_ID}"
+          echo "CHKP_CLOUDGUARD_SECRET: ${CHKP_CLOUDGUARD_SECRET}"
+          echo "SHIFTLEFT_REGION: ${SHIFTLEFT_REGION}"
+        env:
+          CHKP_CLOUDGUARD_ID: ${{ secrets.CHKP_CLOUDGUARD_ID }}
+          CHKP_CLOUDGUARD_SECRET: ${{ secrets.CHKP_CLOUDGUARD_SECRET }}
+          SHIFTLEFT_REGION: ${{ env.SHIFTLEFT_REGION }}
+  
       - name: Save and Scan Order Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER -o order-service.tar
-          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
-                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
-                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+          docker run -e "CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }}" \
+                     -e "CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }}" \
+                     -e "SHIFTLEFT_REGION=${SHIFTLEFT_REGION}" \
                      -v $(pwd)/order-service.tar:/tmp/images/image.tar \
-                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e "${{ secrets.SHIFTLEFT_ENV }}" -i /tmp/images/image.tar
+        env:
+          CHKP_CLOUDGUARD_ID: ${{ secrets.CHKP_CLOUDGUARD_ID }}
+          CHKP_CLOUDGUARD_SECRET: ${{ secrets.CHKP_CLOUDGUARD_SECRET }}
+          SHIFTLEFT_REGION: ${{ env.SHIFTLEFT_REGION }}
+          SHIFTLEFT_ENV: ${{ secrets.SHIFTLEFT_ENV }}
 
   image_assurance_product_service:
     runs-on: ubuntu-latest
