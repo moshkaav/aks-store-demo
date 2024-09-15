@@ -210,8 +210,3 @@ jobs:
       - name: Push Order Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
-          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER
-
-      - name: Push Product Service Image
-        run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
