@@ -32,8 +32,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
-          driver: docker-container  # Use docker-container driver
-          buildkitd-flags: --oci-worker=true --containerd
+          driver: docker-container
 
       - name: Cache Docker layers
         id: cache-docker-layers
@@ -195,33 +194,17 @@ jobs:
           name: store-front-digest
           path: store-front-digest.txt
 
-  # Cache ShiftLeft image step
-  cache_shiftleft_image:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Pull and Cache checkpoint/shiftleft:latest_v2
-        run: |
-          docker pull checkpoint/shiftleft:latest_v2
-          docker save checkpoint/shiftleft:latest_v2 -o shiftleft.tar
-        id: cache_shiftleft
-
-      - name: Upload ShiftLeft Image Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: shiftleft-image
-          path: shiftleft.tar
-
-  # Image Assurance Jobs (for Order, Product, and Store Front services)
+  # Image Assurance Jobs
   image_assurance_order_service:
     runs-on: ubuntu-latest
-    needs: [build_order_service, cache_shiftleft_image]
+    needs: build_order_service
     steps:
       - name: Download Build Number Artifact
         uses: actions/download-artifact@v3
         with:
           name: build-number
 
-      - name: Download Order Service Image and Digest
+      - name: Download Order Service Image
         uses: actions/download-artifact@v3
         with:
           name: order-service-image
@@ -231,15 +214,8 @@ jobs:
         with:
           name: order-service-digest
 
-      - name: Download ShiftLeft Image Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: shiftleft-image
-
-      - name: Load Docker Images from tar files
-        run: |
-          docker load -i order-service.tar
-          docker load -i shiftleft.tar
+      - name: Load Docker Image from tar file
+        run: docker load -i order-service.tar
 
       - name: Verify Order Service Image Digest
         run: |
@@ -260,8 +236,90 @@ jobs:
                      -v $(pwd)/order-service.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
-  # Similar image assurance jobs for `image_assurance_product_service` and `image_assurance_store_front`
+  # Similar image assurance steps for product service and store front:
+  image_assurance_product_service:
+    runs-on: ubuntu-latest
+    needs: build_product_service
+    steps:
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
 
+      - name: Download Product Service Image
+        uses: actions/download-artifact@v3
+        with:
+          name: product-service-image
+
+      - name: Download Product Service Digest
+        uses: actions/download-artifact@v3
+        with:
+          name: product-service-digest
+
+      - name: Load Docker Image from tar file
+        run: docker load -i product-service.tar
+
+      - name: Verify Product Service Image Digest
+        run: |
+          LOCAL_DIGEST=$(docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$(cat build_number.txt))
+          EXPECTED_DIGEST=$(cat product-service-digest.txt)
+          if [ "$LOCAL_DIGEST" != "$EXPECTED_DIGEST" ]; then
+            echo "Image digest mismatch! Expected: $EXPECTED_DIGEST, Got: $LOCAL_DIGEST"
+            exit 1
+          fi
+          echo "Product Service image digest verified."
+
+      - name: Run Product Service Image Assurance
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
+                     -v $(pwd)/product-service.tar:/tmp/images/image.tar \
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+
+  image_assurance_store_front:
+    runs-on: ubuntu-latest
+    needs: build_store_front
+    steps:
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
+      - name: Download Store Front Image
+        uses: actions/download-artifact@v3
+        with:
+          name: store-front-image
+
+      - name: Download Store Front Digest
+        uses: actions/download-artifact@v3
+        with:
+          name: store-front-digest
+
+      - name: Load Docker Image from tar file
+        run: docker load -i store-front.tar
+
+      - name: Verify Store Front Image Digest
+        run: |
+          LOCAL_DIGEST=$(docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$(cat build_number.txt))
+          EXPECTED_DIGEST=$(cat store-front-digest.txt)
+          if [ "$LOCAL_DIGEST" != "$EXPECTED_DIGEST" ]; then
+            echo "Image digest mismatch! Expected: $EXPECTED_DIGEST, Got: $LOCAL_DIGEST"
+            exit 1
+          fi
+          echo "Store Front image digest verified."
+
+      - name: Run Store Front Image Assurance
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
+                     -v $(pwd)/store-front.tar:/tmp/images/image.tar \
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+
+  # Push images to ACR after assurance steps
   push:
     runs-on: ubuntu-latest
     needs: [image_assurance_order_service, image_assurance_product_service, image_assurance_store_front]
