@@ -148,13 +148,19 @@ jobs:
           login-server: ${{ secrets.ACR_REPO }}
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
+          
+      - name: Set up Docker Buildx
+        run: |
+          docker buildx create --use --name buildx-builder --driver docker-container
+          docker buildx inspect buildx-builder --bootstrap
 
-      - name: Build Product Service Image
+      - name: Build Product Service Image with Caching
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
-          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-                     --builder default --push \
-                     -t ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER ./src/product-service
+          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache \
+                             --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+                             --builder buildx-builder --push \
+                             -t ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER ./src/product-service
           docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER > product-service-digest.txt
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER -o product-service.tar
 
@@ -188,13 +194,19 @@ jobs:
           login-server: ${{ secrets.ACR_REPO }}
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
+          
+      - name: Set up Docker Buildx
+        run: |
+          docker buildx create --use --name buildx-builder --driver docker-container
+          docker buildx inspect buildx-builder --bootstrap
 
-      - name: Build Store Front Image
+      - name: Build Store Front Service Image with Caching
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
-          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-                     --builder default --push \
-                     -t ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER ./src/store-front
+          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache \
+                             --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+                             --builder buildx-builder --push \
+                             -t ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER ./src/store-front
           docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER > store-front-digest.txt
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER -o store-front.tar
 
