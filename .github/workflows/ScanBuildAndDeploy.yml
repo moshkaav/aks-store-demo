@@ -121,13 +121,6 @@ jobs:
           # Save the image to a tar file
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER -o order-service.tar
   
-      - name: Pull and Verify Pushed Image (Debugging)
-        run: |
-          docker pull ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$(cat build_number.txt)
-  
-      - name: List Docker images
-        run: docker images
-  
       - name: Upload Order Service Image
         uses: actions/upload-artifact@v3
         with:
