@@ -178,6 +178,8 @@ jobs:
     steps:
       - name: Call package-store-front workflow
         uses: ./.github/workflows/package-store-front.yaml
+        with:
+          build_number: ${{ steps.set-variables.outputs.VERSION }}
 
 
   # Image Assurance Jobs (for Order, Product, and Store Front services)
