@@ -57,12 +57,12 @@ jobs:
       # Build specific service images
       - name: Build Order Service Image
         run: |
-          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ steps.get_build_number.outputs.NEXT_BUILD_NUMBER }} ./src/order-service
-
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ env.NEXT_BUILD_NUMBER }} ./src/order-service
+      
       - name: Build Product Service Image
         run: |
-          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ steps.get_build_number.outputs.NEXT_BUILD_NUMBER }} ./src/product-service
-
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ env.NEXT_BUILD_NUMBER }} ./src/product-service
+      
       - name: Build Store Front Image
         run: |
-          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ steps.get_build_number.outputs.NEXT_BUILD_NUMBER }} ./src/store-front
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ env.NEXT_BUILD_NUMBER }} ./src/store-front
