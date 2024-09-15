@@ -178,8 +178,7 @@ jobs:
     steps:
       - name: Call package-store-front workflow
         uses: ./.github/workflows/package-store-front.yaml
-        with:
-          ref: main  # Branch reference or specific commit
+
 
   # Image Assurance Jobs (for Order, Product, and Store Front services)
   image_assurance_order_service:
