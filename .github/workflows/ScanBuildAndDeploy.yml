@@ -119,7 +119,7 @@ jobs:
                              --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
                              --builder buildx-builder --push \
                              -t ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER ./src/order-service
-          docker inspect --format='{{index .Id}}' ***/code-to-cloud/order-service:$NEXT_BUILD_NUMBER > order-service-digest.txt
+          docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER > order-service-digest.txt
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER -o order-service.tar
 
       - name: List Docker images
