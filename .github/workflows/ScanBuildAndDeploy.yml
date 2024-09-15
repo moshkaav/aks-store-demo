@@ -54,15 +54,73 @@ jobs:
           git commit -m "Increment build number to ${{ env.NEXT_BUILD_NUMBER }}"
           git push origin main
 
-      # Build specific service images
+      build_order_service:
+    runs-on: ubuntu-latest
+    needs: retrieve_build_number
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}
       - name: Build Order Service Image
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ env.NEXT_BUILD_NUMBER }} ./src/order-service
-      
+
+  build_product_service:
+    runs-on: ubuntu-latest
+    needs: retrieve_build_number
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}
       - name: Build Product Service Image
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ env.NEXT_BUILD_NUMBER }} ./src/product-service
-      
+
+  build_store_front:
+    runs-on: ubuntu-latest
+    needs: retrieve_build_number
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}
       - name: Build Store Front Image
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ env.NEXT_BUILD_NUMBER }} ./src/store-front
+
+  push:
+    runs-on: ubuntu-latest
+    needs: [build_order_service, build_product_service, build_store_front]
+    steps:
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}
+
+      - name: Push Order Service Image
+        run: |
+          docker push ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ env.NEXT_BUILD_NUMBER }}
+
+      - name: Push Product Service Image
+        run: |
+          docker push ${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ env.NEXT_BUILD_NUMBER }}
+
+      - name: Push Store Front Image
+        run: |
+          docker push ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ env.NEXT_BUILD_NUMBER }}
