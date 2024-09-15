@@ -43,7 +43,7 @@ jobs:
           export NEXT_BUILD_NUMBER=$((BUILD_NUMBER+1))
           echo "Next build number is $NEXT_BUILD_NUMBER"
           echo $NEXT_BUILD_NUMBER > build_number.txt
-          echo "::set-output name=NEXT_BUILD_NUMBER::$NEXT_BUILD_NUMBER"  # Set output for next steps
+          echo "NEXT_BUILD_NUMBER=$NEXT_BUILD_NUMBER" >> $GITHUB_ENV  # Use Environment File for output
 
       - name: Commit the incremented build number
         run: |
