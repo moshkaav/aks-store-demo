@@ -180,11 +180,14 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-number
+      - name: Read build number
+        id: read_build_number
+        run: echo "BUILD_NUMBER=$(cat build_number.txt)" >> $GITHUB_ENV
           
       - name: Call package-store-front workflow
         uses: ./.github/workflows/package-store-front.yaml
         with:
-          build_number: $(cat build_number.txt)
+          build_number: ${{ env.BUILD_NUMBER }}
 
 
   # Image Assurance Jobs (for Order, Product, and Store Front services)
