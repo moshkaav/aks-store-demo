@@ -176,7 +176,7 @@ jobs:
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
-                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
                      -v $(pwd)/order-service.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
@@ -202,7 +202,7 @@ jobs:
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
-                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
                      -v $(pwd)/product-service.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
@@ -228,7 +228,7 @@ jobs:
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
-                     -e SHIFTLEFT_REGION=${{ env.SHIFTLEFT_REGION }} \
+                     -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
                      -v $(pwd)/store-front.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
