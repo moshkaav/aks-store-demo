@@ -223,4 +223,21 @@ jobs:
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
-          login-server: ${{ secrets.ACR_RE
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}
+
+      - name: Push Order Service Image
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER
+
+      - name: Push Product Service Image
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER
+
+      - name: Push Store Front Image
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER
