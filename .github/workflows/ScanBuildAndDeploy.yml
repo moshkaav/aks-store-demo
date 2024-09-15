@@ -1,4 +1,3 @@
-
 name: Build and Deploy AKS Store Quickstart
 
 on:
@@ -11,6 +10,31 @@ env:
   SPECTRAL_DSN: ${{ secrets.SPECTRAL_DSN }}
 
 jobs:
+  # Cache the ShiftLeft Docker image so that it's only downloaded once
+  cache_shiftleft_image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}
+
+      - name: Pull ShiftLeft Docker Image
+        run: |
+          docker pull checkpoint/shiftleft:latest_v2
+        continue-on-error: true
+      - name: Save ShiftLeft Docker Image as Cache
+        run: |
+          docker save checkpoint/shiftleft:latest_v2 -o shiftleft_image.tar
+        continue-on-error: true
+      - name: Upload ShiftLeft Image Cache
+        uses: actions/upload-artifact@v3
+        with:
+          name: shiftleft-image-cache
+          path: shiftleft_image.tar
+
   # Code scanning step
   code_scan:
     runs-on: ubuntu-latest
@@ -29,21 +53,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
-      # Set up Docker Buildx with cache enabled
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          driver-opts: image=moby/buildkit:latest
-
-      - name: Cache Docker layers
-        id: cache-docker-layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
 
       - name: Log in to ACR
         uses: azure/docker-login@v1
@@ -75,6 +84,47 @@ jobs:
           name: build-number
           path: build_number.txt
 
+  build_order_service:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}
+
+      - name: Build Order Service Image
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          echo "Using build number: $NEXT_BUILD_NUMBER"
+          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+                     --builder default --push \
+                     -t ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER ./src/order-service
+          docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER > order-service-digest.txt
+          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER -o order-service.tar
+
+      - name: Upload Order Service Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: order-service-image
+          path: order-service.tar
+
+      - name: Upload Order Service Digest
+        uses: actions/upload-artifact@v3
+        with:
+          name: order-service-digest
+          path: order-service-digest.txt
+
   build_product_service:
     runs-on: ubuntu-latest
     needs: build
@@ -94,14 +144,16 @@ jobs:
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
 
-      - name: Build Product Service Image with Cache
+      - name: Build Product Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
-          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache                              --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max                              --builder default --push                              -t ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER ./src/product-service
+          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+                     --builder default --push \
+                     -t ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER ./src/product-service
           docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER > product-service-digest.txt
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER -o product-service.tar
 
-      - name: Upload Product Service Image and Digest
+      - name: Upload Product Service Image
         uses: actions/upload-artifact@v3
         with:
           name: product-service-image
@@ -113,8 +165,83 @@ jobs:
           name: product-service-digest
           path: product-service-digest.txt
 
-  # Image Assurance Job (Order Service example, similar for Product and Store Front services)
+  build_store_front:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}
+
+      - name: Build Store Front Image
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+                     --builder default --push \
+                     -t ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER ./src/store-front
+          docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER > store-front-digest.txt
+          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER -o store-front.tar
+
+      - name: Upload Store Front Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: store-front-image
+          path: store-front.tar
+
+      - name: Upload Store Front Digest
+        uses: actions/upload-artifact@v3
+        with:
+          name: store-front-digest
+          path: store-front-digest.txt
+
+  # Image Assurance Jobs (for Order, Product, and Store Front services)
   image_assurance_order_service:
+    runs-on: ubuntu-latest
+    needs: build_order_service
+    steps:
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
+      - name: Download Order Service Image
+        uses: actions/download-artifact@v3
+        with:
+          name: order-service-image
+
+      - name: Load Docker Image from tar file
+        run: docker load -i order-service.tar
+
+      - name: Verify Order Service Digest
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          IMAGE_DIGEST=$(docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER)
+          STORED_DIGEST=$(cat order-service-digest.txt)
+          if [ "$IMAGE_DIGEST" != "$STORED_DIGEST" ]; then
+            echo "Image digest mismatch! Verification failed."
+            exit 1
+          fi
+
+      - name: Run Order Service Image Assurance
+        run: |
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
+                     -v $(pwd)/order-service.tar:/tmp/images/image.tar \
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+
+  image_assurance_product_service:
     runs-on: ubuntu-latest
     needs: build_product_service
     steps:
@@ -131,23 +258,63 @@ jobs:
       - name: Load Docker Image from tar file
         run: docker load -i product-service.tar
 
-      - name: Verify Docker Image
+      - name: Verify Product Service Digest
         run: |
-          local_digest=$(docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER)
-          saved_digest=$(cat product-service-digest.txt)
-          if [ "$local_digest" != "$saved_digest" ]; then
-            echo "Image digest mismatch!"
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          IMAGE_DIGEST=$(docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER)
+          STORED_DIGEST=$(cat product-service-digest.txt)
+          if [ "$IMAGE_DIGEST" != "$STORED_DIGEST" ]; then
+            echo "Image digest mismatch! Verification failed."
             exit 1
           fi
 
       - name: Run Product Service Image Assurance
         run: |
-          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }}                      -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }}                      -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }}                      -v $(pwd)/product-service.tar:/tmp/images/image.tar                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
+                     -v $(pwd)/product-service.tar:/tmp/images/image.tar \
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+
+  image_assurance_store_front:
+    runs-on: ubuntu-latest
+    needs: build_store_front
+    steps:
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
+      - name: Download Store Front Image
+        uses: actions/download-artifact@v3
+        with:
+          name: store-front-image
+
+      - name: Load Docker Image from tar file
+        run: docker load -i store-front.tar
+
+      - name: Verify Store Front Digest
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          IMAGE_DIGEST=$(docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER)
+          STORED_DIGEST=$(cat store-front-digest.txt)
+          if [ "$IMAGE_DIGEST" != "$STORED_DIGEST" ]; then
+            echo "Image digest mismatch! Verification failed."
+            exit 1
+          fi
+
+      - name: Run Store Front Image Assurance
+        run: |
+          docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
+                     -e CHKP_CLOUDGUARD_SECRET=${{ secrets.CHKP_CLOUDGUARD_SECRET }} \
+                     -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
+                     -v $(pwd)/store-front.tar:/tmp/images/image.tar \
+                     checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
 
   # Push images to ACR after assurance steps
   push:
     runs-on: ubuntu-latest
-    needs: image_assurance_order_service
+    needs: [image_assurance_order_service, image_assurance_product_service, image_assurance_store_front]
     steps:
       - name: Log in to ACR
         uses: azure/docker-login@v1
@@ -161,7 +328,17 @@ jobs:
         with:
           name: build-number
 
+      - name: Push Order Service Image
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER
+
       - name: Push Product Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
           docker push ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER
+
+      - name: Push Store Front Image
+        run: |
+          NEXT_BUILD_NUMBER=$(cat build_number.txt)
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER
