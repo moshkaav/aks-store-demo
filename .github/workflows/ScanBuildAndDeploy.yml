@@ -1,8 +1,10 @@
-name: Main
+name: Build and Deploy AKS Store Quickstart
+
 on:
   push:
-    branches: [ main ]
-    
+    branches:
+      - main
+
 env:
   SPECTRAL_DSN: ${{ secrets.SPECTRAL_DSN }}
 
@@ -10,9 +12,56 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Install and run Spectral CI
-      uses: checkpointsw/spectral-github-action@v3
-      with:
-        spectral-dsn: ${{ env.SPECTRAL_DSN }}
-        spectral-args: scan --ok --engines secrets,iac,oss --include-tags base,audit3,iac
+      - uses: actions/checkout@v2
+
+      - name: Install and run Spectral CI
+        uses: checkpointsw/spectral-github-action@v3
+        with:
+          spectral-dsn: ${{ env.SPECTRAL_DSN }}
+          spectral-args: scan --ok --engines secrets,iac,oss --include-tags base,audit3,iac
+
+  build:
+    runs-on: ubuntu-latest
+    needs: scan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}
+
+      # Step to retrieve and increment the build number
+      - name: Retrieve Build Number
+        id: get_build_number
+        run: |
+          if [ ! -f build_number.txt ]; then echo "0" > build_number.txt; fi
+          export BUILD_NUMBER=$(cat build_number.txt)
+          export NEXT_BUILD_NUMBER=$((BUILD_NUMBER+1))
+          echo "Next build number is $NEXT_BUILD_NUMBER"
+          echo $NEXT_BUILD_NUMBER > build_number.txt
+        shell: bash
+
+      - name: Commit the incremented build number
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add build_number.txt
+          git commit -m "Increment build number to ${{ steps.get_build_number.outputs.NEXT_BUILD_NUMBER }}"
+          git push
+
+      # Build specific service images
+      - name: Build Order Service Image
+        run: |
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ steps.get_build_number.outputs.NEXT_BUILD_NUMBER }} ./src/order-service
+
+      - name: Build Product Service Image
+        run: |
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ steps.get_build_number.outputs.NEXT_BUILD_NUMBER }} ./src/product-service
+
+      - name: Build Store Front Image
+        run: |
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ steps.get_build_number.outputs.NEXT_BUILD_NUMBER }} ./src/store-front
