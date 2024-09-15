@@ -103,15 +103,7 @@ jobs:
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
   
-      - name: Set up Docker Buildx
-        run: |
-          docker buildx create --use --name buildx-builder --driver docker-container
-          docker buildx inspect buildx-builder --bootstrap
-  
-      - name: Ensure cache directory exists
-        run: mkdir -p /tmp/.buildx-cache
-  
-      - name: Build and Push Order Service Image with Caching
+      - name: Build and Push Order Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
           echo "Using build number: $NEXT_BUILD_NUMBER"
@@ -120,10 +112,8 @@ jobs:
           docker images
   
           # Build and push the image
-          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache \
-                              --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-                              --builder buildx-builder --push \
-                              -t ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER ./src/order-service
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER ./src/order-service
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER
   
           # Debug: List Docker images after the build and push
           docker images
@@ -171,19 +161,12 @@ jobs:
           login-server: ${{ secrets.ACR_REPO }}
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
-          
-      - name: Set up Docker Buildx
-        run: |
-          docker buildx create --use --name buildx-builder --driver docker-container
-          docker buildx inspect buildx-builder --bootstrap
 
-      - name: Build Product Service Image with Caching
+      - name: Build Product Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
-          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache \
-                             --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-                             --builder buildx-builder --push \
-                             -t ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER ./src/product-service
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER ./src/product-service
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER
           docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER > product-service-digest.txt
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER -o product-service.tar
 
@@ -217,19 +200,12 @@ jobs:
           login-server: ${{ secrets.ACR_REPO }}
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
-          
-      - name: Set up Docker Buildx
-        run: |
-          docker buildx create --use --name buildx-builder --driver docker-container
-          docker buildx inspect buildx-builder --bootstrap
 
-      - name: Build Store Front Service Image with Caching
+      - name: Build Store Front Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)
-          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache \
-                             --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-                             --builder buildx-builder --push \
-                             -t ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER ./src/store-front
+          docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER ./src/store-front
+          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER
           docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER > store-front-digest.txt
           docker save ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER -o store-front.tar
 
