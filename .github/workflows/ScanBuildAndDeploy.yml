@@ -22,7 +22,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    needs: scan
+    needs: code_scan
     outputs:
       next_build_number: ${{ steps.get_build_number.outputs.NEXT_BUILD_NUMBER }}
     steps:
@@ -146,7 +146,7 @@ jobs:
 
   push:
     runs-on: ubuntu-latest
-    needs: scan_images
+    needs: image_assurance
     steps:
       - name: Log in to ACR
         uses: azure/docker-login@v1
