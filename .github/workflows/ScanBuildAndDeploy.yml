@@ -180,6 +180,10 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-number
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver: docker-container
 
       - name: Set environment variables
         id: set-variables
