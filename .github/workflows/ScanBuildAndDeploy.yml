@@ -50,18 +50,31 @@ jobs:
           git commit -m "Increment build number to $(cat build_number.txt)"
           git push origin main
 
+      - name: Upload Build Number Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-number
+          path: build_number.txt
+
   build_order_service:
     runs-on: ubuntu-latest
     needs: build
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.ACR_REPO }}
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
+
       - name: Build Order Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
@@ -75,12 +88,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.ACR_REPO }}
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
+
       - name: Build Product Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
@@ -94,12 +114,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.ACR_REPO }}
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
+
       - name: Build Store Front Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
@@ -111,6 +138,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_order_service
     steps:
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
       - name: Save and Scan Order Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
@@ -125,6 +157,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_product_service
     steps:
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
       - name: Save and Scan Product Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
@@ -139,6 +176,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_store_front
     steps:
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
       - name: Save and Scan Store Front Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
@@ -153,21 +195,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: [image_assurance_order_service, image_assurance_product_service, image_assurance_store_front]
     steps:
+      - name: Download Build Number Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-number
+
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.ACR_REPO }}
           username: ${{ secrets.ACR_USER }}
           password: ${{ secrets.ACR_PASS }}
+
       - name: Push Order Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
           docker push ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER
+
       - name: Push Product Service Image
         run: |
           NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
-          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/product-service:$NEXT_BUILD_NUMBER
-      - name: Push Store Front Image
-        run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)  # Read the build number from file
-          docker push ${{ secrets.ACR_REPO }}/code-to-cloud/store-front:$NEXT_BUILD_NUMBER
