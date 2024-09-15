@@ -177,7 +177,7 @@ jobs:
     needs: build
     steps:
       - name: Call package-store-front workflow
-        uses: ./.github/workflows/package-store-front.yaml
+        uses: ../.github/workflows/package-store-front.yaml
         with:
           build_number: ${{ steps.set-variables.outputs.VERSION }}
 
