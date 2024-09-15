@@ -43,7 +43,7 @@ jobs:
           export NEXT_BUILD_NUMBER=$((BUILD_NUMBER+1))
           echo "Next build number is $NEXT_BUILD_NUMBER"
           echo $NEXT_BUILD_NUMBER > build_number.txt
-          echo "NEXT_BUILD_NUMBER=$NEXT_BUILD_NUMBER" >> $GITHUB_ENV  # Export NEXT_BUILD_NUMBER for use in other jobs
+          echo "NEXT_BUILD_NUMBER=$NEXT_BUILD_NUMBER" >> $GITHUB_ENV  # Use Environment File for output
 
       - name: Commit the incremented build number
         run: |
@@ -69,6 +69,8 @@ jobs:
       - name: Build Order Service Image
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ env.NEXT_BUILD_NUMBER }} ./src/order-service
+        env:
+          NEXT_BUILD_NUMBER: ${{ env.NEXT_BUILD_NUMBER }}  # Ensure the env var is passed
 
   build_product_service:
     runs-on: ubuntu-latest
@@ -85,6 +87,8 @@ jobs:
       - name: Build Product Service Image
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ env.NEXT_BUILD_NUMBER }} ./src/product-service
+        env:
+          NEXT_BUILD_NUMBER: ${{ env.NEXT_BUILD_NUMBER }}
 
   build_store_front:
     runs-on: ubuntu-latest
@@ -101,6 +105,8 @@ jobs:
       - name: Build Store Front Image
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ env.NEXT_BUILD_NUMBER }} ./src/store-front
+        env:
+          NEXT_BUILD_NUMBER: ${{ env.NEXT_BUILD_NUMBER }}
 
   push:
     runs-on: ubuntu-latest
