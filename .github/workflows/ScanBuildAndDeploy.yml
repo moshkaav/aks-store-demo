@@ -19,9 +19,44 @@ jobs:
           spectral-dsn: ${{ secrets.SPECTRAL_DSN }}
           spectral-args: scan --ok --engines secrets,iac,oss --include-tags base,audit3,iac
 
-  build_order_service:
+  build:
     runs-on: ubuntu-latest
     needs: code_scan
+    outputs:
+      next_build_number: ${{ steps.get_build_number.outputs.NEXT_BUILD_NUMBER }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}
+
+      - name: Retrieve Build Number
+        id: get_build_number
+        run: |
+          if [ ! -f build_number.txt ]; then echo "0" > build_number.txt; fi
+          export BUILD_NUMBER=$(cat build_number.txt)
+          export NEXT_BUILD_NUMBER=$((BUILD_NUMBER+1))
+          echo "Next build number is $NEXT_BUILD_NUMBER"
+          echo $NEXT_BUILD_NUMBER > build_number.txt
+          echo "NEXT_BUILD_NUMBER=$NEXT_BUILD_NUMBER" >> $GITHUB_ENV
+
+      - name: Commit the incremented build number
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git pull origin main
+          git add build_number.txt
+          git commit -m "Increment build number to $NEXT_BUILD_NUMBER"
+          git push origin main
+
+  build_order_service:
+    runs-on: ubuntu-latest
+    needs: build
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -35,9 +70,11 @@ jobs:
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ env.NEXT_BUILD_NUMBER }} ./src/order-service
           echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-scan/order-service:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
+
       - name: Save Order Service Image to Tar
         run: |
           docker save $IMAGE_TAG -o order-service.tar
+
       - name: Scan Order Service Image
         run: |
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
@@ -48,7 +85,7 @@ jobs:
 
   build_product_service:
     runs-on: ubuntu-latest
-    needs: build_order_service
+    needs: build
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -62,9 +99,11 @@ jobs:
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ env.NEXT_BUILD_NUMBER }} ./src/product-service
           echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-scan/product-service:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
+
       - name: Save Product Service Image to Tar
         run: |
           docker save $IMAGE_TAG -o product-service.tar
+
       - name: Scan Product Service Image
         run: |
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
@@ -75,7 +114,7 @@ jobs:
 
   build_store_front:
     runs-on: ubuntu-latest
-    needs: build_product_service
+    needs: build
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -89,9 +128,11 @@ jobs:
         run: |
           docker build -t ${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ env.NEXT_BUILD_NUMBER }} ./src/store-front
           echo "IMAGE_TAG=${{ secrets.ACR_REPO }}/code-to-scan/store-front:${{ env.NEXT_BUILD_NUMBER }}" >> $GITHUB_ENV
+
       - name: Save Store Front Image to Tar
         run: |
           docker save $IMAGE_TAG -o store-front.tar
+
       - name: Scan Store Front Image
         run: |
           docker run -e CHKP_CLOUDGUARD_ID=${{ secrets.CHKP_CLOUDGUARD_ID }} \
@@ -102,7 +143,7 @@ jobs:
 
   push:
     runs-on: ubuntu-latest
-    needs: build_store_front
+    needs: [build_order_service, build_product_service, build_store_front]
     steps:
       - name: Log in to ACR
         uses: azure/docker-login@v1
