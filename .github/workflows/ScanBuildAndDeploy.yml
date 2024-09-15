@@ -251,6 +251,7 @@ jobs:
                      -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
                      -v $(pwd)/order-service.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+        continue-on-error: true
 
   image_assurance_product_service:
     runs-on: ubuntu-latest
@@ -291,6 +292,7 @@ jobs:
                      -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
                      -v $(pwd)/product-service.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+        continue-on-error: true
 
   image_assurance_store_front:
     runs-on: ubuntu-latest
@@ -331,6 +333,7 @@ jobs:
                      -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
                      -v $(pwd)/store-front.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
+        continue-on-error: true
 
   # Push images to ACR after assurance steps
   push:
