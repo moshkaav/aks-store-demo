@@ -49,9 +49,10 @@ jobs:
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+          git pull origin main  # Pull the latest changes before committing
           git add build_number.txt
-          git commit -m "Increment build number to ${{ steps.get_build_number.outputs.NEXT_BUILD_NUMBER }}"
-          git push
+          git commit -m "Increment build number to ${{ env.NEXT_BUILD_NUMBER }}"
+          git push origin main
 
       # Build specific service images
       - name: Build Order Service Image
