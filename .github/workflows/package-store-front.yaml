@@ -70,3 +70,24 @@ jobs:
             org.opencontainers.image.source=${{ github.repositoryUrl }}
             org.opencontainers.image.created=${{ steps.set-variables.outputs.CREATED }}
             org.opencontainers.image.revision=${{ steps.set-variables.outputs.VERSION }}
+            
+      - name: Inspect Store Front Image
+        run: |
+          docker inspect --format='{{index .Id}}' ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }} > ${{ steps.set-variables.outputs.IMAGE }}-digest.txt
+
+      - name: Save Store Front Image
+        run: |
+          docker save ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }} -o ${{ steps.set-variables.outputs.IMAGE }}.tar
+      
+      - name: Upload Store Front Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.set-variables.outputs.IMAGE }}-image
+          path: ${{ steps.set-variables.outputs.IMAGE }}.tar
+
+      - name: Upload Store Front Digest
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.set-variables.outputs.IMAGE }}-digest
+          path: ${{ steps.set-variables.outputs.IMAGE }}-digest.txt
+
