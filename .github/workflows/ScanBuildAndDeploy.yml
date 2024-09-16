@@ -185,7 +185,7 @@ jobs:
         run: echo "BUILD_NUMBER=$(cat build_number.txt)" >> $GITHUB_ENV
           
       - name: Call package-store-front workflow
-        uses: moshkaav/aks-store-demo/.github/workflows/package-store-front.yaml
+        uses: moshkaav/aks-store-demo/workflows/package-store-front.yaml@main
         with:
           build_number: ${{ env.BUILD_NUMBER }}
 
