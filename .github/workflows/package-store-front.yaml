@@ -55,6 +55,11 @@ jobs:
           install: true
           buildkitd-flags: --oci-worker=true
       
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
+      
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
@@ -69,6 +74,7 @@ jobs:
           file: src/store-front/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
+          load: true
           tags: |
             ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:latest
             ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }}
