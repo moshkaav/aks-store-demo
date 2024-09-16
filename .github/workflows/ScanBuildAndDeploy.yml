@@ -88,7 +88,7 @@ jobs:
     needs: build
     uses: moshkaav/aks-store-demo/.github/workflows/package-order-service.yaml@main
     with:
-       build_number: $NEXT_BUILD_NUMBER
+       build_number: NEXT_BUILD_NUMBER=$(cat build_number.txt)
     secrets: inherit
     
   build_product_service:
