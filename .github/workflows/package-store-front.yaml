@@ -28,13 +28,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      #- name: Get build number
-      #  run: |
-      #    if [ ! -f build_number.txt ]; then
-      #      echo "1" > build_number.txt
-      #    fi
-      #    echo $(( $(cat build_number.txt) + 1 )) > build_number.txt
-
       - name: Set environment variables
         id: set-variables
         run: |
