@@ -75,6 +75,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: false
           #load: true
+          outputs: type=docker,dest=${{ steps.set-variables.outputs.IMAGE }}.tar
           tags: |
             ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:latest
             ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }}
