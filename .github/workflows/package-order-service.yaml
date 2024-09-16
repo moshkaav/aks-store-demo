@@ -6,7 +6,7 @@ on:
       - 'main'
     paths:
       - 'src/order-service/**'
-
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -14,17 +14,27 @@ permissions:
   packages: write
 
 jobs:
-  publish-container-image:
+  publish-order-service:
     
     runs-on: ubuntu-latest
 
     steps:
+
+      - name: Get build number
+        run: |
+          if [ ! -f build_number.txt ]; then
+            echo "1" > build_number.txt
+          fi
+          echo $(( $(cat build_number.txt) + 1 )) > build_number.txt
+
+          
       - name: Set environment variables
         id: set-variables
         run: |
-          echo "REPOSITORY=ghcr.io/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
-          echo "IMAGE=code-to-cloud/order-service" >> "$GITHUB_OUTPUT"
-          echo "VERSION=$(echo ${GITHUB_SHA} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+          BUILD_NUMBER=$(cat build_number.txt)
+          echo "REPOSITORY=${{ secrets.ACR_REPO }}/code-to-cloud" >> "$GITHUB_OUTPUT"
+          echo "IMAGE=order-service" >> "$GITHUB_OUTPUT"
+          echo "VERSION=${BUILD_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "CREATED=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
 
       - name: Env variable output
@@ -41,12 +51,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1 
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}     
+          login-server: ${{ secrets.ACR_REPO }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASS }}   
       
       - name: Build and push
         uses: docker/build-push-action@v2
@@ -54,7 +64,7 @@ jobs:
           context: src/order-service
           file: src/order-service/Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: false
           tags: |
             ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:latest
             ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }}
@@ -62,3 +72,23 @@ jobs:
             org.opencontainers.image.source=${{ github.repositoryUrl }}
             org.opencontainers.image.created=${{ steps.set-variables.outputs.CREATED }}
             org.opencontainers.image.revision=${{ steps.set-variables.outputs.VERSION }}
+            
+      - name: Inspect Store Front Image
+        run: |
+          docker inspect --format='{{index .Id}}' ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }} > ${{ steps.set-variables.outputs.IMAGE }}-digest.txt
+
+      - name: Save Store Front Image
+        run: |
+          docker save ${{ steps.set-variables.outputs.REPOSITORY }}/code-to-cloud/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }} -o ${{ steps.set-variables.outputs.IMAGE }}.tar
+      
+      - name: Upload Order Service Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.set-variables.outputs.IMAGE }}-image
+          path: ${{ steps.set-variables.outputs.IMAGE }}.tar
+
+      - name: Upload Order Service Digest
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.set-variables.outputs.IMAGE }}-digest
+          path: ${{ steps.set-variables.outputs.IMAGE }}-digest.txt
