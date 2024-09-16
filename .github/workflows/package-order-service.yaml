@@ -79,7 +79,7 @@ jobs:
 
       - name: Save Store Front Image
         run: |
-          docker save ${{ steps.set-variables.outputs.REPOSITORY }}/code-to-cloud/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }} -o ${{ steps.set-variables.outputs.IMAGE }}.tar
+          docker save ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }} -o ${{ steps.set-variables.outputs.IMAGE }}.tar
       
       - name: Upload Order Service Image
         uses: actions/upload-artifact@v3
