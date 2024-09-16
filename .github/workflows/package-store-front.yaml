@@ -78,8 +78,8 @@ jobs:
           #load: true
        #   outputs: type=oci,dest=${{ steps.set-variables.outputs.IMAGE }}.tar
           tags: |
-            ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:latest
-            ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }}
+            ${{ steps.set-variables.outputs.REPOSITORY }}/code-to-cloud/${{ steps.set-variables.outputs.IMAGE }}:latest
+            ${{ steps.set-variables.outputs.REPOSITORY }}/code-to-cloud/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }}
           labels: |
             org.opencontainers.image.source=${{ github.repositoryUrl }}
             org.opencontainers.image.created=${{ steps.set-variables.outputs.CREATED }}
@@ -91,7 +91,7 @@ jobs:
 
       - name: Save Store Front Image
         run: |
-          docker save ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }} -o ${{ steps.set-variables.outputs.IMAGE }}.tar
+          docker save ${{ steps.set-variables.outputs.REPOSITORY }}/code-to-cloud/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }} -o ${{ steps.set-variables.outputs.IMAGE }}.tar
       
       - name: Upload Store Front Image
         uses: actions/upload-artifact@v3
