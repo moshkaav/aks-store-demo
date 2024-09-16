@@ -14,7 +14,7 @@ permissions:
   packages: write
 
 jobs:
-  publish-order-service:
+  build-order-service:
     
     runs-on: ubuntu-latest
 
