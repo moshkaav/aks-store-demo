@@ -85,54 +85,9 @@ jobs:
           path: build_number.txt
 
   build_order_service:
-    runs-on: ubuntu-latest
     needs: build
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-  
-      - name: Download Build Number Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: build-number
-  
-      - name: Log in to ACR
-        uses: azure/docker-login@v1
-        with:
-          login-server: ${{ secrets.ACR_REPO }}
-          username: ${{ secrets.ACR_USER }}
-          password: ${{ secrets.ACR_PASS }}
-  
-      - name: Build and Push Order Service Image
-        run: |
-          NEXT_BUILD_NUMBER=$(cat build_number.txt)
-          echo "Using build number: $NEXT_BUILD_NUMBER"
-  
-          # Build and push the image
-          docker build -t ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER ./src/order-service
-          # docker push ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER
-  
-          # Debug: List Docker images after the build and push
-          #docker images
-  
-          # Inspect the image to get its ID
-          docker inspect --format='{{index .Id}}' ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER > order-service-digest.txt
-  
-          # Save the image to a tar file
-          docker save ${{ secrets.ACR_REPO }}/code-to-cloud/order-service:$NEXT_BUILD_NUMBER -o order-service.tar
-  
-      - name: Upload Order Service Image
-        uses: actions/upload-artifact@v3
-        with:
-          name: order-service-image
-          path: order-service.tar
-  
-      - name: Upload Order Service Digest
-        uses: actions/upload-artifact@v3
-        with:
-          name: order-service-digest
-          path: order-service-digest.txt
-
+    uses: moshkaav/aks-store-demo/.github/workflows/package-order-service.yaml@main
+    secrets: inherit
   build_product_service:
     runs-on: ubuntu-latest
     needs: build
