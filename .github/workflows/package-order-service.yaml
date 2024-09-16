@@ -30,7 +30,7 @@ jobs:
           BUILD_NUMBER=${{ inputs.build_number }}
           echo "REPOSITORY=${{ secrets.ACR_REPO }}/code-to-cloud" >> "$GITHUB_OUTPUT"
           echo "IMAGE=order-service" >> "$GITHUB_OUTPUT"
-          echo "VERSION=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "VERSION=${BUILD_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "CREATED=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
 
       - name: Env variable output
