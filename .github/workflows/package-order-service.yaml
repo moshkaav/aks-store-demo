@@ -29,7 +29,7 @@ jobs:
       - name: Set environment variables
         id: set-variables
         run: |
-          BUILD_NUMBER=${{ inputs.build_number }}
+          BUILD_NUMBER=${{ inputs.build_number }}+1
           echo "REPOSITORY=${{ secrets.ACR_REPO }}/code-to-cloud" >> "$GITHUB_OUTPUT"
           echo "IMAGE=order-service" >> "$GITHUB_OUTPUT"
           echo "VERSION=${BUILD_NUMBER}" >> "$GITHUB_OUTPUT"
