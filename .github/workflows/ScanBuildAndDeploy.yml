@@ -90,6 +90,13 @@ jobs:
     with:
        build_number: $(cat build_number.txt)
     secrets: inherit
+
+  build_store_front:
+    needs: build
+    uses: moshkaav/aks-store-demo/.github/workflows/package-store-front.yaml@main
+    with:
+      build_number: $(cat build_number.txt)
+    secrets: inherit
     
   build_product_service:
     runs-on: ubuntu-latest
@@ -130,12 +137,7 @@ jobs:
           name: product-service-digest
           path: product-service-digest.txt
 
-  build_store_front:
-    needs: build
-    uses: moshkaav/aks-store-demo/.github/workflows/package-store-front.yaml@main
-    with:
-      build_number: $(cat build_number.txt)
-    secrets: inherit
+ 
 
 
 
