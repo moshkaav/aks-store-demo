@@ -16,7 +16,7 @@ permissions:
   packages: write
 
 jobs:
-  publish-container-image:
+  build-store-front:
     
     runs-on: ubuntu-latest
 
