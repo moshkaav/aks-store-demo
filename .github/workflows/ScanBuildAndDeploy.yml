@@ -173,21 +173,8 @@ jobs:
           path: product-service-digest.txt
 
   build_store_front:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Download Build Number Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: build-number
-      - name: Read build number
-        id: read_build_number
-        run: echo "BUILD_NUMBER=$(cat build_number.txt)" >> $GITHUB_ENV
-          
-      - name: Call package-store-front workflow
         uses: moshkaav/aks-store-demo/.github/workflows/package-store-front.yaml@main
-        with:
-          build_number: ${{ env.BUILD_NUMBER }}
+
 
 
   # Image Assurance Jobs (for Order, Product, and Store Front services)
