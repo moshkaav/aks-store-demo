@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
           
       - name: Set environment variables
         id: set-variables
@@ -40,9 +42,6 @@ jobs:
           echo ${{ steps.set-variables.outputs.IMAGE }}
           echo ${{ steps.set-variables.outputs.VERSION }}
           echo ${{ steps.set-variables.outputs.CREATED }}
-
-      - name: Checkout code
-        uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
