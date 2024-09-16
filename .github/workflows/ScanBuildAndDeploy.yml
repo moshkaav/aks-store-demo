@@ -175,10 +175,7 @@ jobs:
   build_store_front:
     needs: build
     uses: moshkaav/aks-store-demo/.github/workflows/package-store-front.yaml@main
-    secrets:
-      ACR_REPO:${{ secrets.ACR_REPO }}
-      ACR_USER:${{ secrets.ACR_USER }}
-      ACR_PASS:${{ secrets.ACR_PASS }}
+    secrets: inherit
 
 
 
