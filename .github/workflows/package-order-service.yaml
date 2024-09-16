@@ -63,7 +63,8 @@ jobs:
         with:
           context: src/order-service
           file: src/order-service/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          #platforms: linux/amd64 ,linux/arm64
+          platforms: linux/amd64
           push: false
           tags: |
             ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:latest
