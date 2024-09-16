@@ -67,6 +67,7 @@ jobs:
           BUILD_NUMBER=$(cat build_number.txt)
           NEXT_BUILD_NUMBER=$((BUILD_NUMBER+1))
           echo $NEXT_BUILD_NUMBER > build_number.txt
+          echo "build number is $NEXT_BUILD_NUMBER"
         id: build_number
 
       - name: Commit the incremented build number
