@@ -74,7 +74,7 @@ jobs:
           file: src/store-front/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
-          load: true
+          #load: true
           tags: |
             ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:latest
             ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }}
