@@ -87,7 +87,10 @@ jobs:
   build_order_service:
     needs: build
     uses: moshkaav/aks-store-demo/.github/workflows/package-order-service.yaml@main
+    with:
+       build_number: $NEXT_BUILD_NUMBER
     secrets: inherit
+    
   build_product_service:
     runs-on: ubuntu-latest
     needs: build
