@@ -130,6 +130,8 @@ jobs:
   build_store_front:
     needs: build
     uses: moshkaav/aks-store-demo/.github/workflows/package-store-front.yaml@main
+    with:
+      build_number: $NEXT_BUILD_NUMBER
     secrets: inherit
 
 
