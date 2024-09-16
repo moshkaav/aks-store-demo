@@ -7,6 +7,10 @@ on:
     paths:
       - 'src/order-service/**'
   workflow_call:
+    inputs:
+        build_number:
+          required: true
+          type: string
   workflow_dispatch:
 
 permissions:
@@ -19,19 +23,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Get build number
-        run: |
-          if [ ! -f build_number.txt ]; then
-            echo "1" > build_number.txt
-          fi
-          echo $(( $(cat build_number.txt) + 1 )) > build_number.txt
-
           
       - name: Set environment variables
         id: set-variables
         run: |
-          BUILD_NUMBER=$(cat build_number.txt)
+          BUILD_NUMBER=${{ inputs.build_number }}
           echo "REPOSITORY=${{ secrets.ACR_REPO }}/code-to-cloud" >> "$GITHUB_OUTPUT"
           echo "IMAGE=order-service" >> "$GITHUB_OUTPUT"
           echo "VERSION=${BUILD_NUMBER}" >> "$GITHUB_OUTPUT"
