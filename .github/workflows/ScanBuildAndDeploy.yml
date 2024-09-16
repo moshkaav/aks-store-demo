@@ -150,7 +150,7 @@ jobs:
           name: shiftleft-image-cache
 
       - name: Load Docker Image from tar file
-        run: docker load -i shiftleft-image.tar
+        run: docker load -i shiftleft_image.tar
 
       - name: Download Order Service Image
         uses: actions/download-artifact@v3
@@ -199,7 +199,7 @@ jobs:
           name: shiftleft-image-cache
 
       - name: Load Docker Image from tar file
-        run: docker load -i shiftleft-image.tar
+        run: docker load -i shiftleft_image.tar
 
       - name: Download Product Service Image
         uses: actions/download-artifact@v3
@@ -248,7 +248,7 @@ jobs:
           name: shiftleft-image-cache
 
       - name: Load Docker Image from tar file
-        run: docker load -i shiftleft-image.tar
+        run: docker load -i shiftleft_image.tar
 
       - name: Download Store Front Image
         uses: actions/download-artifact@v3
