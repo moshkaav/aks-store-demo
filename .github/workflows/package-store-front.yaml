@@ -87,7 +87,7 @@ jobs:
             
       - name: Inspect Store Front Image
         run: |
-          docker inspect --format='{{index .Id}}' ${{ steps.set-variables.outputs.REPOSITORY }}/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }} > ${{ steps.set-variables.outputs.IMAGE }}-digest.txt
+          docker inspect --format='{{index .Id}}' ${{ steps.set-variables.outputs.REPOSITORY }}/code-to-cloud/${{ steps.set-variables.outputs.IMAGE }}:${{ steps.set-variables.outputs.VERSION }} > ${{ steps.set-variables.outputs.IMAGE }}-digest.txt
 
       - name: Save Store Front Image
         run: |
