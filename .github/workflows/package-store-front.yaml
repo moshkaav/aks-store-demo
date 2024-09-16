@@ -72,7 +72,8 @@ jobs:
         with:
           context: src/store-front
           file: src/store-front/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          #platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: false
           #load: true
           outputs: type=oci,dest=${{ steps.set-variables.outputs.IMAGE }}.tar
