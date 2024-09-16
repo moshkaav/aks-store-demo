@@ -173,7 +173,8 @@ jobs:
           path: product-service-digest.txt
 
   build_store_front:
-        uses: moshkaav/aks-store-demo/.github/workflows/package-store-front.yaml@main
+    needs: build
+    uses: moshkaav/aks-store-demo/.github/workflows/package-store-front.yaml@main
 
 
 
