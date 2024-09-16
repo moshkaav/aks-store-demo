@@ -144,6 +144,14 @@ jobs:
         with:
           name: build-number
 
+      - name: get image assurance from cache
+        uses: actions/download-artifact@v3
+        with:
+          name: shiftleft-image-cache
+
+      - name: Load Docker Image from tar file
+        run: docker load -i shiftleft-image.tar
+
       - name: Download Order Service Image
         uses: actions/download-artifact@v3
         with:
@@ -184,6 +192,14 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-number
+          
+      - name: get image assurance from cache
+        uses: actions/download-artifact@v3
+        with:
+          name: shiftleft-image-cache
+
+      - name: Load Docker Image from tar file
+        run: docker load -i shiftleft-image.tar
 
       - name: Download Product Service Image
         uses: actions/download-artifact@v3
@@ -225,6 +241,14 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-number
+          
+      - name: get image assurance from cache
+        uses: actions/download-artifact@v3
+        with:
+          name: shiftleft-image-cache
+
+      - name: Load Docker Image from tar file
+        run: docker load -i shiftleft-image.tar
 
       - name: Download Store Front Image
         uses: actions/download-artifact@v3
