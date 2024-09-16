@@ -53,6 +53,7 @@ jobs:
         with: 
           driver: docker-container
           install: true
+          buildkitd-flags: --oci-worker=true
       
       - name: Log in to ACR
         uses: azure/docker-login@v1
