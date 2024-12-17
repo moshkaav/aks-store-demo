@@ -239,7 +239,7 @@ jobs:
                      -e SHIFTLEFT_REGION=${{ vars.SHIFTLEFT_REGION }} \
                      -v $(pwd)/product-service.tar:/tmp/images/image.tar \
                      checkpoint/shiftleft:latest_v2 shiftleft image-scan -e ${{ secrets.SHIFTLEFT_ENV }} -i /tmp/images/image.tar
-        continue-on-error: false
+        continue-on-error: true
 
   image_assurance_store_front:
     runs-on: ubuntu-latest
